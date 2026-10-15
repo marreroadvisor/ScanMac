@@ -2,7 +2,7 @@
 
 ## Descargar y abrir
 
-1. Descarga [ScanMac0.8.1 para macOS](https://github.com/jessiel212/ScanMac/releases/download/v0.8.1/ScanMac-0.8.1-macOS-universal.zip).
+1. Descarga [ScanMac0.8.1 para macOS](https://github.com/marreroadvisor/ScanMac/releases/download/v0.8.1/ScanMac-0.8.1-macOS-universal.zip).
 2. Descomprime el ZIP. Puedes mover `ScanMac.app` a Aplicaciones.
 3. Abre la app. Requiere macOS14 o posterior; el ejecutable incluye Apple Silicon e Intel. Las pruebas de uso de esta versión se hicieron en Apple Silicon.
 

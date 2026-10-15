@@ -4,7 +4,7 @@ Aplicación nativa de macOS para organizar documentos, trabajar con PDF y usar O
 
 **Versión pública de prueba: 0.8.1. Estado experimental.** El código se publica con licencia MIT. No incluye documentos de usuarios, credenciales ni pesos de modelos.
 
-[Descargar para macOS](https://github.com/jessiel212/ScanMac/releases/download/v0.8.1/ScanMac-0.8.1-macOS-universal.zip) · [Guía de uso](docs/GUIA.md) · [Cambios](CHANGELOG.md) · [Pruebas automáticas](https://github.com/jessiel212/ScanMac/actions)
+[Descargar para macOS](https://github.com/marreroadvisor/ScanMac/releases/download/v0.8.1/ScanMac-0.8.1-macOS-universal.zip) · [Guía de uso](docs/GUIA.md) · [Cambios](CHANGELOG.md) · [Pruebas automáticas](https://github.com/marreroadvisor/ScanMac/actions)
 
 La descarga tiene firma local y todavía no está notarizada por Apple. Consulta la guía antes de instalar.
 
@@ -98,6 +98,6 @@ Se aceptan correcciones, mejoras de accesibilidad, traducciones y pruebas. Consu
 
 ## Ficha y recorrido visual
 
-[Ficha del programa](FICHA.md) · [Video de 15 segundos](docs/videos/scanmac-tour.mp4) · [Reportar un error](https://github.com/jessiel212/ScanMac/issues/new?template=error.yml) · [Proponer una mejora](https://github.com/jessiel212/ScanMac/issues/new?template=mejora.yml)
+[Ficha del programa](FICHA.md) · [Video de 15 segundos](docs/videos/scanmac-tour.mp4) · [Reportar un error](https://github.com/marreroadvisor/ScanMac/issues/new?template=error.yml) · [Proponer una mejora](https://github.com/marreroadvisor/ScanMac/issues/new?template=mejora.yml)
 
 El video es un recorrido de capturas de la interfaz con datos de demostración; no es una grabación de una adquisición o conversión en ejecución.

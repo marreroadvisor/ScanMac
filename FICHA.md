@@ -26,7 +26,7 @@ Versión experimental con firma local, sin notarización de Apple. macOS puede b
 
 ## Recursos
 
-[Descarga](https://github.com/jessiel212/ScanMac/releases) · [Guía](https://github.com/jessiel212/ScanMac/blob/main/docs/GUIA.md) · [Código](https://github.com/jessiel212/ScanMac)
+[Descarga](https://github.com/marreroadvisor/ScanMac/releases) · [Guía](https://github.com/marreroadvisor/ScanMac/blob/main/docs/GUIA.md) · [Código](https://github.com/marreroadvisor/ScanMac)
 
 ## Contacto
 
