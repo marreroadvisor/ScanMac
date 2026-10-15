@@ -1,0 +1,50 @@
+name: ScanMac checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scanmac-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable:
+    name: Catalogs, privacy and server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate all language catalogs
+        run: python3 Tests/check_languages.py Resources/Languages
+      - name: Check the public source package
+        run: python3 Tests/check_public_package.py
+      - name: Run private-server tests with synthetic data
+        run: python3 -m unittest discover -s Server -v
+      - name: Check Python syntax without downloading models
+        env:
+          PYTHONPYCACHEPREFIX: /tmp/scanmac-python-cache
+        run: python3 -m compileall -q Engines Tests Server
+  macos:
+    name: Native macOS regression and universal build
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Preserve digital PDF text, fonts and colors
+        run: zsh Tests/run-native-text.sh
+      - name: Verify assistant image/report operations
+        run: zsh Tests/run-assistant-skills.sh
+      - name: Verify tool workflows and conversions
+        run: zsh Tests/run-tools.sh
+      - name: Verify folders, tags, trash and protection
+        run: zsh Tests/run-library.sh
+      - name: Run integration, layout, signature and network tests
+        run: zsh Tests/run.sh
+      - name: Build and verify the signed universal app
+        run: zsh build.sh
