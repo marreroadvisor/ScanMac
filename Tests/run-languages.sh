@@ -10,7 +10,7 @@ open(sys.argv[1],'w').write(open(sys.argv[2]).read().split('@main struct ScanMac
 PY
 scanmacSources=("$stage/Source/"*.swift)
 scanmacSources=("${(@)scanmacSources:#$stage/Source/ScanMac.swift}")
-scanmacFlags=(-target arm64-apple-macos14.0 -parse-as-library -swift-version 5 -module-cache-path "$stage/module-cache" -framework SwiftUI -framework AppKit -framework PDFKit -framework Vision -framework CoreImage -framework CoreText -framework AVFoundation -framework QuartzCore -framework Quartz -framework ImageCaptureCore -framework Security)
+scanmacFlags=(-target "$(uname -m)-apple-macos14.0" -parse-as-library -swift-version 5 -module-cache-path "$stage/module-cache" -framework SwiftUI -framework AppKit -framework PDFKit -framework Vision -framework CoreImage -framework CoreText -framework AVFoundation -framework QuartzCore -framework Quartz -framework ImageCaptureCore -framework Security)
 xcrun swiftc "$stage/Main.swift" "${scanmacSources[@]}" Tests/OCRLanguageHarness.swift -o "$stage/OCRRunner" "${scanmacFlags[@]}"
 "$stage/OCRRunner"
 if [[ "${1:-}" == "ocr-only" ]]; then exit 0; fi

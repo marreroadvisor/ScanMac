@@ -72,9 +72,21 @@ def detect_ai(a, root):
     state = load_file(str(verified_model(root,'community.safetensors')),device='cpu')
     state = {k.removeprefix('vit.'):v for k,v in state.items()}
     model.load_state_dict(state,strict=True); model.eval()
-    transform = transforms.Compose([transforms.Resize(440),transforms.CenterCrop(384),transforms.ToTensor(),transforms.Normalize([.485,.456,.406],[.229,.224,.225])])
-    with torch.inference_mode(): score = float(torch.sigmoid(model(transform(Image.fromarray(a)).unsqueeze(0))).item())
-    return dict(score=score, report=f'Community Forensics (OwensLab,384): puntuación de clase sintética {score:.4f}.\nEs una salida del clasificador, no una probabilidad calibrada ni una prueba. Recorte central384px tras redimensionar el lado corto a440px.\nPuede fallar con escaneos, capturas, compresión y generadores nuevos. Un valor bajo no demuestra autenticidad. Recomendado: imagen original, no página PDF rasterizada.', model='OwensLab/commfor-model-384', revision='6076002bf0d9dd37537f965ee2f06f826c333b61')
+    # Center-only inspection can miss off-center edits/composites. Keep five spatial views.
+    resized = transforms.Resize(440)(Image.fromarray(a))
+    crops = transforms.FiveCrop(384)(resized)
+    normalize = transforms.Compose([transforms.ToTensor(),transforms.Normalize([.485,.456,.406],[.229,.224,.225])])
+    with torch.inference_mode():
+        scores = torch.sigmoid(model(torch.stack([normalize(crop) for crop in crops]))).flatten().tolist()
+    scores = [float(value) for value in scores]
+    score = float(np.median(scores)); low,high = min(scores),max(scores)
+    disagreement = high-low > .5
+    small = min(a.shape[:2]) < 384
+    report = f'Community Forensics (OwensLab,384): mediana de clase sintética {score:.4f}.\nCinco zonas (esquinas y centro), rango {low:.4f}–{high:.4f}. No es una probabilidad calibrada ni una prueba de autenticidad.'
+    if disagreement: report += '\nINCONCLUSO: las zonas discrepan ampliamente. Revisa la imagen original; no uses la mediana como veredicto.'
+    if small: report += '\nResolución de origen baja: la imagen se amplió para el modelo y la señal puede ser poco fiable.'
+    report += '\nPuede fallar con escaneos, capturas, compresión y generadores nuevos. Un valor bajo no demuestra autenticidad. Recomendado: imagen original, no página PDF rasterizada.'
+    return dict(score=score,crop_scores=scores,score_range=[low,high],inconclusive=disagreement or small,report=report,model='OwensLab/commfor-model-384',revision='6076002bf0d9dd37537f965ee2f06f826c333b61')
 
 def tamper(a, request, output):
     h,w = a.shape[:2]; s=min(1,1600/max(h,w)); small=cv2.resize(a,(max(1,round(w*s)),max(1,round(h*s))))

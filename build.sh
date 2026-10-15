@@ -22,11 +22,11 @@ cat > "$stage/ScanMac.app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>ScanMac</string>
 <key>CFBundleIdentifier</key><string>local.scanmac.desktop</string>
 <key>CFBundleIconFile</key><string>SMIcon</string>
-<key>CFBundleVersion</key><string>17</string>
+<key>CFBundleVersion</key><string>18</string>
 <key>CFBundleName</key><string>ScanMac</string>
 <key>CFBundleDisplayName</key><string>ScanMac</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.8.0</string>
+<key>CFBundleShortVersionString</key><string>0.8.1</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 <key>NSLocalNetworkUsageDescription</key><string>ScanMac busca escáneres Bonjour solo cuando solicitas buscar dispositivos.</string>
@@ -51,6 +51,8 @@ for code, _, _ in languages:
     usage = {'NSCameraUsageDescription': values['ScanMac uses the camera only when you start a document capture.'], 'NSLocalNetworkUsageDescription': values['ScanMac looks for Bonjour scanners only when you request device discovery.']}
     (localized / 'InfoPlist.strings').write_text('\n'.join(json.dumps(k, ensure_ascii=False) + ' = ' + json.dumps(v, ensure_ascii=False) + ';' for k, v in usage.items()) + '\n')
 PYRES
+cp LICENSE "$stage/ScanMac.app/Contents/Resources/LICENSE.txt"
+cp THIRD_PARTY_NOTICES.md "$stage/ScanMac.app/Contents/Resources/THIRD_PARTY_NOTICES.md"
 codesign --force --deep --sign - "$stage/ScanMac.app"
 codesign --verify --deep --strict "$stage/ScanMac.app"
 ditto -c -k --norsrc --noextattr --keepParent "$stage/ScanMac.app" "$stage/ScanMac.zip"

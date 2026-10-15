@@ -7,28 +7,66 @@ import UniformTypeIdentifiers
 struct LayoutTextBox {
     let text: String
     let bounds: CGRect
+    var confidence: Float = 1
+    var fontName: String? = nil
+    var fontPixels: CGFloat? = nil
+    var colorHex: String = "000000"
 }
 
 struct LayoutPage {
     let size: CGSize
     let image: NSImage
     let boxes: [LayoutTextBox]
+    var usedNativeText = false
+    var meanConfidence: Float { boxes.isEmpty ? 0 : boxes.map(\.confidence).reduce(0,+)/Float(boxes.count) }
 }
 
 enum LayoutDocumentConverter {
     private static func xml(_ text: String) -> String {
         String(text.unicodeScalars.filter { $0.value == 9 || $0.value == 10 || $0.value == 13 || $0.value >= 32 }).replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
     }
+    /// Preserve selectable PDF text instead of introducing OCR errors into digital originals.
+    /// Rotated pages stay on the rendered OCR path until native glyph rotation is supported.
+    static func nativeBoxes(_ page: PDFPage, rasterSize: CGSize) -> [LayoutTextBox] {
+        let media = page.bounds(for: .mediaBox)
+        guard page.rotation % 360 == 0, media.width > 0, media.height > 0, let text = page.string, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let regex = try? NSRegularExpression(pattern: #"\S+"#) else { return [] }
+        var words: [LayoutTextBox] = []
+        for match in regex.matches(in: text, range: NSRange(location:0,length:(text as NSString).length)) {
+            guard let selection = page.selection(for:match.range), let string = selection.string, !string.isEmpty else { continue }
+            let box = selection.bounds(for:page).intersection(media)
+            guard !box.isNull, box.width > 0, box.height > 0, [box.minX,box.minY,box.width,box.height].allSatisfy(\.isFinite) else { continue }
+            let b = CGRect(x:(box.minX-media.minX)/media.width,y:(box.minY-media.minY)/media.height,width:box.width/media.width,height:box.height/media.height)
+            let styled = selection.attributedString
+            let attributes = (styled?.length ?? 0) > 0 ? styled!.attributes(at:0,effectiveRange:nil) : [:]
+            let font = attributes[.font] as? NSFont
+            let color = (attributes[.foregroundColor] as? NSColor)?.usingColorSpace(.deviceRGB)
+            let hex = color.map { String(format:"%02X%02X%02X",Int(min(1,max(0,$0.redComponent))*255),Int(min(1,max(0,$0.greenComponent))*255),Int(min(1,max(0,$0.blueComponent))*255)) } ?? "000000"
+            words.append(LayoutTextBox(text:string,bounds:b,fontName:font?.familyName,fontPixels:font.map { $0.pointSize*rasterSize.height/media.height },colorHex:hex))
+        }
+        return rows(words).flatMap { row -> [LayoutTextBox] in
+            var combined: [LayoutTextBox] = []
+            for word in row {
+                if let last = combined.last, word.bounds.minX-last.bounds.maxX <= max(0.006,min(word.bounds.height,last.bounds.height)*media.height/media.width*0.7), last.fontName == word.fontName, last.colorHex == word.colorHex {
+                    let merged = LayoutTextBox(text:last.text+" "+word.text,bounds:last.bounds.union(word.bounds),fontName:last.fontName,fontPixels:last.fontPixels,colorHex:last.colorHex)
+                    combined[combined.count-1] = merged
+                } else { combined.append(word) }
+            }
+            return combined
+        }
+    }
     static func recognize(document: PDFDocument, configuration: OCRConfiguration = OCRLanguageCatalog.load()) throws -> [LayoutPage] {
         try (0..<document.pageCount).map { i in
             guard let page = document.page(at: i) else { throw NSError(domain: "ScanMac", code: 1) }
             let image = page.thumbnail(of: NSSize(width: 2200, height: 2200), for: .mediaBox)
             guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw NSError(domain: "ScanMac", code: 2) }
+            let native = nativeBoxes(page,rasterSize:CGSize(width:cg.width,height:cg.height))
+            if !native.isEmpty { return LayoutPage(size:CGSize(width:cg.width,height:cg.height),image:image,boxes:native,usedNativeText:true) }
             let request = VNRecognizeTextRequest(); configuration.apply(to: request)
             try VNImageRequestHandler(cgImage: cg).perform([request])
             let boxes = (request.results ?? []).compactMap { observation -> LayoutTextBox? in
                 guard let candidate = observation.topCandidates(1).first else { return nil }
-                return LayoutTextBox(text: candidate.string, bounds: observation.boundingBox)
+                return LayoutTextBox(text: candidate.string, bounds: observation.boundingBox,confidence:candidate.confidence)
             }
             return LayoutPage(size: CGSize(width: cg.width, height: cg.height), image: image, boxes: boxes)
         }
@@ -136,8 +174,8 @@ enum LayoutDocumentConverter {
                 let x = offsetX + Int(box.bounds.minX * Double(width))
                 let y = offsetY + Int((1 - box.bounds.maxY) * Double(height))
                 let w = max(1, Int(box.bounds.width * Double(width))), h = max(1, Int(box.bounds.height * Double(height)))
-                let font = max(100, min(20000, Int(Double(h) / 12700.0 * 100 * 0.85)))
-                shapes += "<p:sp><p:nvSpPr><p:cNvPr id=\"\(textIndex + 3)\" name=\"Texto editable \(textIndex + 1)\"/><p:cNvSpPr txBox=\"1\"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"\(x)\" y=\"\(y)\"/><a:ext cx=\"\(w)\" cy=\"\(h)\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap=\"none\" lIns=\"0\" tIns=\"0\" rIns=\"0\" bIns=\"0\"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p><a:pPr><a:buNone/></a:pPr><a:r><a:rPr lang=\"es-ES\" sz=\"\(font)\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill><a:latin typeface=\"Arial\"/></a:rPr><a:t>\(xml(box.text))</a:t></a:r><a:endParaRPr sz=\"\(font)\"/></a:p></p:txBody></p:sp>"
+                let font = max(100, min(20000, Int(box.fontPixels.map { Double($0)*ratio/12700.0*100 } ?? (Double(h)/12700.0*100*0.85))))
+                shapes += "<p:sp><p:nvSpPr><p:cNvPr id=\"\(textIndex + 3)\" name=\"Texto editable \(textIndex + 1)\"/><p:cNvSpPr txBox=\"1\"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"\(x)\" y=\"\(y)\"/><a:ext cx=\"\(w)\" cy=\"\(h)\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap=\"none\" lIns=\"0\" tIns=\"0\" rIns=\"0\" bIns=\"0\"><a:noAutofit/></a:bodyPr><a:lstStyle/><a:p><a:pPr><a:buNone/></a:pPr><a:r><a:rPr lang=\"es-ES\" sz=\"\(font)\"><a:solidFill><a:srgbClr val=\"\(box.colorHex)\"/></a:solidFill><a:latin typeface=\"\(xml(box.fontName ?? "Arial"))\"/></a:rPr><a:t>\(xml(box.text))</a:t></a:r><a:endParaRPr sz=\"\(font)\"/></a:p></p:txBody></p:sp>"
             }
             let slide = extracted.appendingPathComponent("ppt/slides/slide\(index + 1).xml")
             var source = try String(contentsOf: slide, encoding: .utf8)
@@ -189,9 +227,9 @@ enum LayoutDocumentConverter {
             body += "<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr><w:r><w:pict><v:rect id=\"background\(id)\" style=\"\(base);z-index:-251654144\" stroked=\"f\"><v:imagedata r:id=\"img\(id)\" o:title=\"Page background\"/></v:rect></w:pict></w:r>"
             for (n,box) in page.boxes.enumerated() {
                 let x = box.bounds.minX*w, y = (1-box.bounds.maxY)*h, bw = box.bounds.width*w, bh = box.bounds.height*h
-                let font = max(8,min(100,Int(bh*1.55)))
+                let font = max(8,min(400,Int(box.fontPixels.map { $0*scale*2 } ?? (bh*1.55))))
                 let style = "position:absolute;margin-left:\(x)pt;margin-top:\(y)pt;width:\(max(1,bw))pt;height:\(max(1,bh+2))pt;mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:1"
-                body += "<w:r><w:pict><v:rect id=\"text\(id)_\(n)\" style=\"\(style)\" filled=\"f\" stroked=\"f\"><v:textbox inset=\"0,0,0,0\"><w:txbxContent><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\"/><w:sz w:val=\"\(font)\"/></w:rPr><w:t xml:space=\"preserve\">\(xml(box.text))</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>"
+                body += "<w:r><w:pict><v:rect id=\"text\(id)_\(n)\" style=\"\(style)\" filled=\"f\" stroked=\"f\"><v:textbox inset=\"0,0,0,0\"><w:txbxContent><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"\(xml(box.fontName ?? "Arial"))\" w:hAnsi=\"\(xml(box.fontName ?? "Arial"))\"/><w:sz w:val=\"\(font)\"/><w:color w:val=\"\(box.colorHex)\"/></w:rPr><w:t xml:space=\"preserve\">\(xml(box.text))</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>"
             }
             body += "</w:p>"
             lastSection = "<w:sectPr><w:type w:val=\"nextPage\"/><w:pgSz w:w=\"\(Int(w*20))\" w:h=\"\(Int(h*20))\"/><w:pgMar w:top=\"0\" w:right=\"0\" w:bottom=\"0\" w:left=\"0\" w:header=\"0\" w:footer=\"0\"/></w:sectPr>"

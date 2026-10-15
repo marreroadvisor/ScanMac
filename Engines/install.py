@@ -1,9 +1,10 @@
 """Run with Python3.12 on macOS. Installs only into ScanMac Application Support.
 Downloads dependencies/weights; never uploads user documents or configures services.
 """
-import sys, subprocess, venv, json, urllib.request, hashlib, os
+import sys, subprocess, venv, json, urllib.request, hashlib, os, platform
 from pathlib import Path
 if sys.version_info[:2] != (3,12): raise SystemExit('Usa Python3.12 para este entorno reproducible.')
+if platform.system() != 'Darwin' or platform.machine() != 'arm64': raise SystemExit('Estos motores requieren macOS con Apple Silicon; la app nativa puede compilarse por separado para Intel.')
 source=Path(__file__).resolve().parent
 root=Path.home()/'Library/Application Support/ScanMac/Engines'
 root.mkdir(parents=True,exist_ok=True)

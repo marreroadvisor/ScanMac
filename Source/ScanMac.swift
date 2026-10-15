@@ -258,9 +258,9 @@ struct SignaturePad: View {
 }
 @main struct ScanMacApp: App {
     @StateObject private var appLanguage = AppLanguageSettings.shared
-    @StateObject var lib = Library()
+    @StateObject var lib = Library(rootOverride: DemoLibrary.root)
     var body: some Scene {
-        WindowGroup { MainView().environmentObject(lib).environmentObject(appLanguage).environment(\.locale, appLanguage.locale).environment(\.layoutDirection, appLanguage.language.isRightToLeft ? .rightToLeft : .leftToRight).onAppear { lib.restoreSyncLocation() }.onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appLanguage.refreshSystemLanguage() }.onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in LocalCloudServer.shared.stop() }.onOpenURL { lib.importFiles([$0]) } }
+        WindowGroup { MainView().environmentObject(lib).environmentObject(appLanguage).environment(\.locale, appLanguage.locale).environment(\.layoutDirection, appLanguage.language.isRightToLeft ? .rightToLeft : .leftToRight).onAppear { lib.restoreSyncLocation() }.onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appLanguage.refreshSystemLanguage() }.onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in LocalCloudServer.shared.stop(); DemoLibrary.cleanup() }.onOpenURL { lib.importFiles([$0]) } }
         .windowStyle(.hiddenTitleBar).defaultSize(width: 1440, height: 900)
         .commands {
             CommandMenu(tr("Languages")) {

@@ -14,6 +14,7 @@ import UniformTypeIdentifiers
     @Published var started = false
     @Published var text = ""
     @Published var textEdited = false
+    @Published var recognitionNote = ""
     @Published var result: URL?
     @Published var error: String?
     @Published var saved = false
@@ -29,7 +30,7 @@ import UniformTypeIdentifiers
         guard !started, let data = document.dataRepresentation() else { return }; started = true; running = true
         Task {
             do {
-                let output = try await Task.detached(priority: .userInitiated) { () -> (URL, String) in
+                let output = try await Task.detached(priority: .userInitiated) { () -> (URL, String, String) in
                     guard let snapshot = PDFDocument(data: data) else { throw CocoaError(.fileReadCorruptFile) }
                     let pages = try LayoutDocumentConverter.recognize(document: snapshot, configuration: configuration)
                     let text = pages.map { LayoutDocumentConverter.rows($0.boxes).map { $0.map(\.text).joined(separator: "\t") }.joined(separator: "\n") }.joined(separator: "\n\n")
@@ -38,9 +39,12 @@ import UniformTypeIdentifiers
                     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
                     let url = directory.appendingPathComponent("Result." + ext)
                     switch tool { case .word: try LayoutDocumentConverter.docx(pages: pages, to: url); case .excel: try LayoutDocumentConverter.xlsx(pages: pages, to: url); case .ppt: try LayoutDocumentConverter.pptx(pages: pages, to: url); default: try text.write(to: url, atomically: true, encoding: .utf8) }
-                    return (url, text)
+                    let native = pages.filter(\.usedNativeText).count
+                    let uncertain = pages.filter { !$0.usedNativeText && $0.meanConfidence < 0.75 }.count
+                    let note = "Texto digital conservado: \(native)/\(pages.count) páginas. OCR: \(pages.count-native)." + (uncertain > 0 ? " Revisa \(uncertain) páginas con confianza OCR baja." : "")
+                    return (url, text, note)
                 }.value
-                result = output.0; text = output.1; textEdited = false
+                result = output.0; text = output.1; recognitionNote = output.2; textEdited = false
             } catch { self.error = error.localizedDescription }
             running = false
         }
@@ -121,6 +125,7 @@ struct ToolWorkflowView: View {
                         if tool == .text { Button(tr("Word (.docx)")) { saveEditedWord() }.disabled(session.text.isEmpty) }
                         Spacer(); Button(tr("Convertir")) { session.started = false; session.convert(tool, configuration: lib.ocrConfiguration) }
                     }
+                    Text(session.recognitionNote).font(.caption).foregroundStyle(.secondary)
                     Text(tr("Reconstrucción local aproximada")).font(.caption).foregroundStyle(.secondary)
                 }
                 Button(tr("Choose a document")) { ui.toolSessions.removeValue(forKey: tool) }.buttonStyle(.plain).foregroundStyle(scanGreen)

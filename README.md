@@ -2,7 +2,13 @@
 
 Aplicación nativa de macOS para organizar documentos, trabajar con PDF y usar OCR e IA local.
 
-**Versión inicial pública preparada: 0.8.0. Estado experimental.** El código se publica con licencia MIT. No incluye documentos de usuarios, credenciales ni pesos de modelos.
+**Versión pública de prueba: 0.8.1. Estado experimental.** El código se publica con licencia MIT. No incluye documentos de usuarios, credenciales ni pesos de modelos.
+
+[Descargar para macOS](https://github.com/jessiel212/ScanMac/releases/download/v0.8.1/ScanMac-0.8.1-macOS-universal.zip) · [Guía de uso](docs/GUIA.md) · [Cambios](CHANGELOG.md) · [Pruebas automáticas](https://github.com/jessiel212/ScanMac/actions)
+
+La descarga tiene firma local y todavía no está notarizada por Apple. Consulta la guía antes de instalar.
+
+![ScanMac con datos sintéticos](docs/images/inicio.png)
 
 ## Funciones
 
@@ -33,7 +39,7 @@ Se generan `ScanMac.app` y `ScanMac.zip`. La firma es local (*ad hoc*): la app n
 
 Si Codex CLI está instalado en una ruta admitida, se intenta su modo local aislado. Si el formato del modelo resulta incompatible, el asistente usa el mismo LM Studio directamente y muestra el motor utilizado. No necesita una clave de OpenAI para esta ruta local.
 
-Para los motores de imágenes, instala **Python3.12** y ejecuta:
+Para los motores de imágenes, necesitas **Apple Silicon** e instala **Python3.12** y ejecuta:
 
 ```sh
 python3.12 Engines/install.py
@@ -51,7 +57,7 @@ La sincronización de carpetas y el servidor privado son opcionales. Antes de ac
 
 - OCR, tablas, fuentes y diseño Office pueden contener errores. No se ha verificado el renderizado en todas las versiones de Microsoft Office.
 - La limpieza reconstruye un fondo plausible; no recupera con certeza texto tapado. Revisa las zonas y la vista previa antes de exportar.
-- La puntuación de imagen IA no es una probabilidad calibrada ni certifica autenticidad. Una prueba pequeña de siete imágenes produjo dos positivos entre cuatro etiquetadas reales. No es una evaluación independiente de precisión general.
+- La puntuación de imagen IA resume cinco recortes, muestra discrepancias y no es una probabilidad calibrada ni certifica autenticidad. Una prueba pequeña de siete imágenes produjo dos positivos entre cuatro etiquetadas reales. No es una evaluación independiente de precisión general.
 - ELA, patrones repetidos y diferencias de píxeles son indicios; no validan firmas digitales ni demuestran fraude.
 - La investigación web integrada tiene búsqueda enciclopédica y lectura de URLs accesibles, sin navegación de sitios dinámicos ni acceso a fuentes de pago.
 - La interfaz tiene63 catálogos; algunas etiquetas recientes usan español o inglés y no todas las traducciones tienen revisión profesional.
@@ -62,6 +68,7 @@ La sincronización de carpetas y el servidor privado son opcionales. Antes de ac
 En un Mac con Xcode:
 
 ```sh
+zsh Tests/run-native-text.sh
 zsh Tests/run-assistant-skills.sh
 zsh Tests/run-tools.sh
 zsh Tests/run-library.sh
@@ -76,6 +83,10 @@ zsh Tests/run-advanced-assistant.sh /private/tmp/scanmac-office-tests
 ```
 
 La prueba de inferencia necesita LM Studio y el modelo de ejemplo del harness; adapta el identificador si usas otro. Las pruebas de imagen requieren el entorno de motores. Usa únicamente archivos sintéticos o públicos al enviar resultados de pruebas.
+
+## Capturas
+
+Las capturas de la [guía](docs/GUIA.md) muestran datos sintéticos del modo de demostración, separado de la biblioteca real. Puedes reproducirlo compilando y ejecutando con `--demo`.
 
 ## Contribuir
 
