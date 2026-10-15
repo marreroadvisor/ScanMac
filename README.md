@@ -95,3 +95,9 @@ Se aceptan correcciones, mejoras de accesibilidad, traducciones y pruebas. Consu
 ## Licencia
 
 [MIT](LICENSE) para el código y los gráficos propios de ScanMac. Las dependencias y los modelos mantienen sus licencias; consulta [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Ficha y recorrido visual
+
+[Ficha del programa](FICHA.md) · [Video de 15 segundos](docs/videos/scanmac-tour.mp4) · [Reportar un error](https://github.com/jessiel212/ScanMac/issues/new?template=error.yml) · [Proponer una mejora](https://github.com/jessiel212/ScanMac/issues/new?template=mejora.yml)
+
+El video es un recorrido de capturas de la interfaz con datos de demostración; no es una grabación de una adquisición o conversión en ejecución.
